@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technology Intake and Integration Tool Project - Gantt Chart</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+
+        #chart-container {
+            width: 100%;
+            height: 80vh;
+            border-radius: 10px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            /* Hide scrollbars */
+        }
+
+        canvas {
+            border-radius: 10px;
+        }
+
+        .filter-buttons {
+            margin-bottom: 20px;
+        }
+
+        .filter-button {
+            margin-right: 10px;
+            padding: 8px 15px;
+            background-color: #eee;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="filter-buttons">
+        <button class="filter-button" data-filter="all">All</button>
+        <button class="filter-button" data-filter="Discovery & Requirements">Discovery & Requirements</button>
+        <button class="filter-button" data-filter="System Design">System Design</button>
+        <button class="filter-button" data-filter="Development & Testing">Development & Testing</button>
+        <button class="filter-button" data-filter="Pilot Phase">Pilot Phase</button>
+        <button class="filter-button" data-filter="Deployment & Maintenance">Deployment & Maintenance</button>
+    </div>
+
+    <div id="chart-container">
+        <canvas id="ganttChart"></canvas>
+    </div>
+    <script>
+        const tasks = [
+            { name: 'Kick-off Meeting', start: new Date(2024, 6, 12), end: new Date(2024, 6, 13), section: 'Discovery & Requirements' },
+            { name: 'Stakeholder Interviews', start: new Date(2024, 6, 13), end: new Date(2024, 6, 20), section: 'Discovery & Requirements' },
+            { name: 'Requirements Gathering', start: new Date(2024, 6, 20), end: new Date(2024, 7, 3), section: 'Discovery & Requirements' },
+            { name: 'Requirements Document', start: new Date(2024, 6, 13), end: new Date(2024, 6, 27), section: 'Discovery & Requirements' },
+            { name: 'Competitive Analysis', start: new Date(2024, 6, 12), end: new Date(2024, 6, 26), section: 'Discovery & Requirements' },
+            { name: 'Data Profiling', start: new Date(2024, 7, 3), end: new Date(2024, 7, 17), section: 'Discovery & Requirements' },
+            { name: 'Risk Assessment', start: new Date(2024, 6, 26), end: new Date(2024, 7, 9), section: 'Discovery & Requirements' },
+            { name: 'Design Brainstorming', start: new Date(2024, 7, 9), end: new Date(2024, 7, 16), section: 'System Design' },
+            { name: 'Architecture Diagrams', start: new Date(2024, 7, 9), end: new Date(2024, 7, 23), section: 'System Design' },
+            { name: 'UI/UX Mockups', start: new Date(2024, 7, 9), end: new Date(2024, 7, 23), section: 'System Design' },
+            { name: 'Tech Stack Selection', start: new Date(2024, 7, 23), end: new Date(2024, 8, 6), section: 'System Design' },
+            { name: 'API Specifications', start: new Date(2024, 7, 23), end: new Date(2024, 8, 6), section: 'System Design' },
+            { name: 'Backend Development', start: new Date(2024, 8, 6), end: new Date(2024, 10, 1), section: 'Development & Testing' },
+            { name: 'Frontend Development', start: new Date(2024, 8, 6), end: new Date(2024, 10, 1), section: 'Development & Testing' },
+            { name: 'Integration', start: new Date(2024, 10, 1), end: new Date(2024, 10, 15), section: 'Development & Testing' },
+            { name: 'Testing & QA', start: new Date(2024, 10, 15), end: new Date(2024, 10, 29), section: 'Development & Testing' },
+            { name: 'Bug Fixing', start: new Date(2024, 10, 29), end: new Date(2024, 11, 6), section: 'Development & Testing' },
+            { name: 'Pilot Implementation', start: new Date(2024, 10, 29), end: new Date(2024, 11, 13), section: 'Pilot Phase' },
+            { name: 'Feedback Collection', start: new Date(2024, 11, 13), end: new Date(2024, 11, 20), section: 'Pilot Phase' },
+            { name: 'Performance Analysis', start: new Date(2024, 11, 20), end: new Date(2024, 11, 27), section: 'Pilot Phase' },
+            { name: 'Pilot Bug Fixing', start: new Date(2024, 11, 27), end: new Date(2025, 0, 3), section: 'Pilot Phase' },
+            { name: 'Phased Rollout', start: new Date(2024, 11, 27), end: new Date(2025, 0, 24), section: 'Deployment & Maintenance' },
+            { name: 'User Training', start: new Date(2025, 0, 24), end: new Date(2025, 1, 21), section: 'Deployment & Maintenance' },
+            { name: 'Ongoing Support', start: new Date(2025, 1, 21), end: new Date(2026, 0, 23), section: 'Deployment & Maintenance' },
+            { name: 'Performance Monitoring', start: new Date(2025, 1, 21), end: new Date(2026, 0, 23), section: 'Deployment & Maintenance' },
+        ];
+
+        const sections = [...new Set(tasks.map(task => task.section))];
+        const colors = {
+            'Discovery & Requirements': 'rgba(255, 153, 153, 0.8)',
+            'System Design': 'rgba(255, 204, 153, 0.8)',
+            'Development & Testing': 'rgba(153, 255, 153, 0.8)',
+            'Pilot Phase': 'rgba(153, 204, 255, 0.8)',
+            'Deployment & Maintenance': 'rgba(204, 153, 255, 0.8)'
+        };
+
+        const ctx = document.getElementById('ganttChart').getContext('2d');
+        let chart;
+
+        function createChart(filteredTasks) {
+            if (chart) {
+                chart.destroy();
+            }
+            chart = new Chart(ctx, {
+                type: 'bar',
+
+                data: {
+                    labels: filteredTasks.map(task => task.name),
+                    datasets: [{
+                        data: filteredTasks.map(task => ({
+                            x: [task.start, task.end],
+                            y: task.name
+                        })),
+                        backgroundColor: filteredTasks.map(task => colors[task.section])
+                    }]
+                },
+
+                options: {
+                    indexAxis: 'y',
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'month',
+                                displayFormats: {
+                                    month: 'MMM yyyy'
+                                }
+                            },
+                            position: 'top',
+                            grid: {
+                                color: '#ddd'
+                            },
+                            min: new Date('2024-07-12') // Set the minimum value to the start of 2024
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#ddd'
+                            },
+
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (ctx) {
+                                    const task = tasks[ctx.dataIndex];
+                                    return `${task.section}: ${task.start.toDateString()} to ${task.end.toDateString()}`;
+                                }
+
+
+                            }
+                        },
+
+                    },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeInOutQuad'
+                    }
+                }
+            })
+        };
+
+        const filterButtons = document.querySelectorAll('.filter-button');
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const filter = button.dataset.filter;
+                let filteredTasks = tasks;
+                if (filter !== 'all') {
+                    filteredTasks = tasks.filter(task => task.section === filter);
+                }
+                createChart(filteredTasks);
+            });
+        });
+
+        createChart(tasks); // Initial chart with all tasks
+
+    </script>
+</body>
+
+</html>
