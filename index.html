@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Gantt Chart with D3.js</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .bar {
+            cursor: pointer;
+        }
+        .bar:hover {
+            fill: #4CAF50;
+        }
+        .x-axis path,
+        .x-axis line,
+        .y-axis path,
+        .y-axis line {
+            fill: none;
+            shape-rendering: crispEdges;
+        }
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            border: none;
+            background-color: #8884d8;
+            color: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #4CAF50;
+        }
+        #task-details {
+            margin-top: 20px;
+        }
+        #task-details h2 {
+            margin: 0;
+            color: #4CAF50;
+        }
+        #gantt-chart {
+            width: 100%;
+            height: 600px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .header img {
+            height: 50px;
+            margin-right: 16px;
+        }
+        .header h1 {
+            font-size: 1.5em;
+            margin: 0;
+        }
+        #buttons {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="header">
+            <img src="logo.jpg" alt="Logo">
+            <h1>Healthcare RCM Dashboard Project Gantt Chart</h1>
+        </div>
+        <div id="buttons"></div>
+        <div id="chart-container" style="position: relative;">
+            <svg id="gantt-chart"></svg>
+        </div>
+        <div id="task-details"></div>
+    </div>
+
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        const tasks = [
+            { name: 'Project Kick-off Meeting', start: 0, duration: 1, phase: 'Discovery & Requirements' },
+            { name: 'Stakeholder Interviews', start: 7, duration: 3, phase: 'Discovery & Requirements' },
+            { name: 'Competitive Analysis', start: 7, duration: 3, phase: 'Discovery & Requirements' },
+            { name: 'User Persona Development', start: 10, duration: 2, phase: 'Discovery & Requirements' },
+            { name: 'Technical Architecture Design', start: 14, duration: 3, phase: 'System Design' },
+            { name: 'Data Source Assessment', start: 17, duration: 2, phase: 'System Design' },
+            { name: 'UI/UX Design', start: 21, duration: 5, phase: 'System Design' },
+            { name: 'User Feedback on Prototype', start: 26, duration: 2, phase: 'System Design' },
+            { name: 'SalientView App Development', start: 28, duration: 10, phase: 'Development & Testing' },
+            { name: 'Azure Backend Setup', start: 35, duration: 5, phase: 'Development & Testing' },
+            { name: 'Power BI Report Development', start: 42, duration: 15, phase: 'Development & Testing' },
+            { name: 'Data Integration', start: 49, duration: 10, phase: 'Development & Testing' },
+            { name: 'Azure AI - Model Development', start: 56, duration: 15, phase: 'Development & Testing' },
+            { name: 'Testing & QA', start: 77, duration: 10, phase: 'Development & Testing' },
+            { name: 'Pilot Deployment', start: 87, duration: 14, phase: 'Pilot Phase' },
+            { name: 'Pilot Feedback Collection', start: 101, duration: 7, phase: 'Pilot Phase' },
+            { name: 'Final Adjustments', start: 108, duration: 7, phase: 'Pilot Phase' },
+            { name: 'Full Deployment', start: 115, duration: 14, phase: 'Deployment & Maintenance' },
+            { name: 'User Training', start: 129, duration: 7, phase: 'Deployment & Maintenance' },
+            { name: 'Ongoing Maintenance', start: 136, duration: 30, phase: 'Deployment & Maintenance' },
+        ];
+
+        const phases = [
+            'All',
+            'Discovery & Requirements',
+            'System Design',
+            'Development & Testing',
+            'Pilot Phase',
+            'Deployment & Maintenance',
+        ];
+
+        const startDate = new Date(2024, 6, 12); // July 12, 2024
+        let selectedPhase = 'All';
+        let selectedTask = null;
+
+        const svg = d3.select('#gantt-chart');
+        const margin = { top: 20, right: 30, left: 200, bottom: 30 };
+        const chart = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+        const x = d3.scaleTime();
+        const y = d3.scaleBand().padding(0.1);
+
+        const xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat('%b %d'));
+        const yAxis = d3.axisLeft(y);
+
+        function updateChart() {
+            const containerWidth = document.getElementById('chart-container').offsetWidth;
+            const containerHeight = document.getElementById('chart-container').offsetHeight;
+            const width = containerWidth - margin.left - margin.right;
+            const height = containerHeight - margin.top - margin.bottom;
+
+            svg.attr('width', containerWidth).attr('height', containerHeight);
+
+            const filteredTasks = selectedPhase === 'All' ? tasks : tasks.filter(task => task.phase === selectedPhase);
+
+            filteredTasks.forEach(task => {
+                task.startDate = d3.timeDay.offset(startDate, task.start);
+                task.endDate = d3.timeDay.offset(task.startDate, task.duration);
+            });
+
+            x.range([0, width]).domain([startDate, d3.timeDay.offset(startDate, 180)]);
+            y.range([0, height]).domain(filteredTasks.map(task => task.name));
+
+            chart.selectAll('.bar').remove();
+            chart.selectAll('.x-axis').remove();
+            chart.selectAll('.y-axis').remove();
+
+            chart.append('g').attr('class', 'x-axis').attr('transform', `translate(0,${height})`).call(xAxis);
+            chart.append('g').attr('class', 'y-axis').call(yAxis);
+
+            const bars = chart.selectAll('.bar')
+                .data(filteredTasks)
+                .enter().append('rect')
+                .attr('class', 'bar')
+                .attr('x', task => x(task.startDate))
+                .attr('y', task => y(task.name))
+                .attr('width', 0)
+                .attr('height', y.bandwidth())
+                .attr('fill', task => task.name === selectedTask?.name ? '#4CAF50' : '#8884d8')
+                .on('click', (event, task) => {
+                    selectedTask = task;
+                    displayTaskDetails();
+                    updateChart();
+                });
+
+            bars.transition()
+                .duration(800)
+                .attr('width', task => x(task.endDate) - x(task.startDate));
+        }
+
+        function displayTaskDetails() {
+            const taskDetails = document.getElementById('task-details');
+            if (selectedTask) {
+                taskDetails.innerHTML = `
+                    <h2>${selectedTask.name}</h2>
+                    <p>Phase: ${selectedTask.phase}</p>
+                    <p>Start: ${d3.timeFormat('%b %d')(selectedTask.startDate)}</p>
+                    <p>Duration: ${selectedTask.duration} days</p>
+                `;
+            } else {
+                taskDetails.innerHTML = '';
+            }
+        }
+
+        function createPhaseButtons() {
+            const buttonsDiv = document.getElementById('buttons');
+            phases.forEach(phase => {
+                const button = document.createElement('button');
+                button.innerText = phase;
+                button.onclick = () => {
+                    selectedPhase = phase;
+                    selectedTask = null;
+                    displayTaskDetails();
+                    updateChart();
+                };
+                buttonsDiv.appendChild(button);
+            });
+        }
+
+        window.addEventListener('resize', updateChart);
+
+        createPhaseButtons();
+        updateChart();
+    </script>
+</body>
+</html>
